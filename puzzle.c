@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 void check();
 
@@ -190,12 +190,20 @@ void try_5rows(int top3[3], int top2[2],
 
 /* BOARD CHECKER */
 
+void print_state() {
+  printf("5-row state: low %d, swp %d, t3s %d, t2s %d, b3s %d, b2s %d\n",
+    low, swp, t3s, t2s, b3s, b2s);
+  printf("3-row state: perm %d %d %d %d %d, senses %d, phase %d\n",
+    perm[0], perm[1], perm[2], perm[3], perm[4], senses, phase);
+}
+
 // check board state for satisfaction
 int checks = 0;
 void check() {
   checks++;
-  if (checks % 100000 == 0) {
+  if (checks % 1000000 == 0) {
     printf("%d checks\n", checks);
+    print_state();
   }
 
 #if DEBUG
@@ -227,10 +235,7 @@ void check() {
 
   // print a solution
   printf("SOLUTION!\n");
-  printf("5-row state: low %d, swp %d, t3s %d, t2s %d, b3s %d, b2s %d\n",
-    low, swp, t3s, t2s, b3s, b2s);
-  printf("3-row state: perm %d %d %d %d %d, senses %d, phase %d\n",
-    perm[0], perm[1], perm[2], perm[3], perm[4], senses, phase);
+  print_state();
 }
 
 /* 3-tiles */
