@@ -3,6 +3,7 @@
 
 #define DEBUG 1
 
+void print_state();
 void check();
 
 /* BOARD MANIPULATION FUNCTIONS */
@@ -10,14 +11,14 @@ void check();
 /* board state */
 int board[5][5] = {0, 0, 0, 0, 0};
 
-// put row
+// put on row
 void pr(int r, int c, int sense, int *tile, int len) {
   for (int i = 0; i < len; i++) {
     board[r][c + i] = tile[sense ? len - i - 1 : i];
   }
 }
 
-// put col
+// put on col
 void pc(int r, int c, int sense, int *tile, int len) {
   for (int i = 0; i < len; i++) {
     board[r + i][c] = tile[sense ? len - i - 1 : i];
@@ -48,26 +49,21 @@ void perm_next() {
     if (perm[i] < perm[i + 1]) {
       for (int j = 4; j > i; j--) {
         if (perm[i] < perm[j]) {
-          printf("perm debug 1: %d %d %d %d %d\n",
-            perm[0], perm[1], perm[2], perm[3], perm[4]);
           int temp = perm[i];
           perm[i] = perm[j];
           perm[j] = temp;
 
           for (int k = 0; k < (4 - i) / 2; k++) {
-            printf("perm debug 2: %d %d %d %d %d\n",
-              perm[0], perm[1], perm[2], perm[3], perm[4]);
             int temp = perm[i + 1 + k];
             perm[i + 1 + k] = perm[4 - k];
             perm[4 - k] = temp;
           }
 
 #if DEBUG
-          printf("perm debug 3: %d %d %d %d %d\n",
+          printf("perm debug: %d %d %d %d %d\n",
             perm[0], perm[1], perm[2], perm[3], perm[4]);
 #endif
 
-          printf("\n");
           return;
         }
       }
@@ -99,8 +95,10 @@ void try_3s(int row, int *cols[5]) {
 
       check();
     }
-    
-    perm_next();
+
+    if (p != 119) {
+      perm_next();
+    }
   }
 
   // ||=
@@ -115,13 +113,15 @@ void try_3s(int row, int *cols[5]) {
 
       // three rows
       for (int i = 2; i < 5; i++) {
-        pr(row + i, 2, (senses >> i) & 1, cols[perm[i]], 3);
+        pr(row + i - 2, 2, (senses >> i) & 1, cols[perm[i]], 3);
       }
 
       check();
     }
     
-    perm_next();
+    if (p != 119) {
+      perm_next();
+    }
   }
 
   // |=|
@@ -133,8 +133,8 @@ void try_3s(int row, int *cols[5]) {
       pc(row, 0, senses & 1, cols[perm[0]], 3);
 
       // three rows
-      for (int i = 2; i < 4; i++) {
-        pr(row + i, 1, (senses >> i) & 1, cols[perm[i]], 3);
+      for (int i = 1; i < 4; i++) {
+        pr(row + i - 1, 1, (senses >> i) & 1, cols[perm[i]], 3);
       }
       
       // one column
@@ -143,7 +143,9 @@ void try_3s(int row, int *cols[5]) {
       check();
     }
     
-    perm_next();
+    if (p != 119) {
+      perm_next();
+    }
   }
 
   // =||
@@ -164,7 +166,9 @@ void try_3s(int row, int *cols[5]) {
       check();
     }
     
-    perm_next();
+    if (p != 119) {
+      perm_next();
+    }
   }
 }
 
@@ -183,7 +187,7 @@ void try_5rows(int top3[3], int top2[2],
   for (t3s = 0; t3s < 2; t3s++)     // forward/reverse sense of top 3-tile,
   for (t2s = 0; t2s < 2; t2s++)     // ' ' ' of top 2-tile,
   for (b3s = 0; b3s < 2; b3s++)     // ' ' ' of bottom 3-tile,
-  for (b2s = 0; b2s < 2; b3s++) {   // ' ' ' of bottom 2-tile
+  for (b2s = 0; b2s < 2; b2s++) {   // ' ' ' of bottom 2-tile
     pr(0, 0, t3s, top3, 3);
     pr(0, 3, t2s, top2, 2);
 
@@ -242,14 +246,14 @@ void print_state() {
 int checks = 0;
 void check() {
   checks++;
-  if (checks % 1000000 == 0) {
+  if (checks % 10000 == 0) {
     printf("%d checks\n", checks);
     print_state();
   }
 
 #if DEBUG
-  //printf("checking board:\n");
-  //print_board();
+  printf("checking board:\n");
+  print_board();
 #endif
 
   // check rows
