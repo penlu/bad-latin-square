@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG 0
+#define DEBUG 1
 
 void check();
 
@@ -46,23 +46,28 @@ void perm_reset() {
 void perm_next() {
   for (int i = 3; i >= 0; i--) {
     if (perm[i] < perm[i + 1]) {
-      for (int j = i; j < 5; j++) {
-        if (perm[j] > perm[i]) {
+      for (int j = 4; j > i; j--) {
+        if (perm[i] < perm[j]) {
+          printf("perm debug 1: %d %d %d %d %d\n",
+            perm[0], perm[1], perm[2], perm[3], perm[4]);
           int temp = perm[i];
           perm[i] = perm[j];
           perm[j] = temp;
 
           for (int k = 0; k < (4 - i) / 2; k++) {
+            printf("perm debug 2: %d %d %d %d %d\n",
+              perm[0], perm[1], perm[2], perm[3], perm[4]);
             int temp = perm[i + 1 + k];
             perm[i + 1 + k] = perm[4 - k];
             perm[4 - k] = temp;
           }
 
 #if DEBUG
-          printf("perm debug: %d %d %d %d %d\n",
+          printf("perm debug 3: %d %d %d %d %d\n",
             perm[0], perm[1], perm[2], perm[3], perm[4]);
 #endif
 
+          printf("\n");
           return;
         }
       }
@@ -73,6 +78,7 @@ void perm_next() {
   }
 
   printf("PERM AT END WITHOUT RESET\n");
+  exit(0);
 }
 
 /* 3 ROW BRUTE FORCE */
@@ -188,11 +194,46 @@ void try_5rows(int top3[3], int top2[2],
   }
 }
 
+/* MAIN BODY */
+
+/* 3-tiles */
+int ABC[3] = {0, 1, 2};
+int BDE[3] = {1, 3, 4};
+int DCB[3] = {3, 2, 1};
+int CAD[3] = {2, 0, 3};
+int BAC[3] = {1, 0, 2};
+int EAD[3] = {4, 0, 3};
+int AEC[3] = {0, 4, 2};
+
+/* 2-tiles */
+int BE[2] = {1, 4};
+int ED[2] = {4, 3};
+
+int phase2;
+int main(int argc, char *argv[]) {
+  int *cols[5];
+
+  phase2 = 0;
+  printf("5-rows ABCBE BACED\n");
+  cols[0] = BDE; cols[1] = DCB; cols[2] = CAD; cols[3] = EAD; cols[4] = AEC;
+  try_5rows(ABC, BE, BAC, ED, cols);
+
+  phase2 = 1;
+  printf("5-rows CADBE ABCED\n");
+  cols[0] = BDE; cols[1] = DCB; cols[2] = BAC; cols[3] = EAD; cols[4] = AEC;
+  try_5rows(CAD, BE, ABC, ED, cols);
+
+  phase2 = 2;
+  printf("5-rows CADBE BACED\n");
+  cols[0] = ABC; cols[1] = BDE; cols[2] = DCB; cols[3] = EAD; cols[4] = AEC;
+  try_5rows(CAD, BE, BAC, ED, cols);
+}
+
 /* BOARD CHECKER */
 
 void print_state() {
-  printf("5-row state: low %d, swp %d, t3s %d, t2s %d, b3s %d, b2s %d\n",
-    low, swp, t3s, t2s, b3s, b2s);
+  printf("5-row state: low %d, swp %d, t3s %d, t2s %d, b3s %d, b2s %d, phase %d\n",
+    low, swp, t3s, t2s, b3s, b2s, phase2);
   printf("3-row state: perm %d %d %d %d %d, senses %d, phase %d\n",
     perm[0], perm[1], perm[2], perm[3], perm[4], senses, phase);
 }
@@ -207,8 +248,8 @@ void check() {
   }
 
 #if DEBUG
-  printf("checking board:\n");
-  print_board();
+  //printf("checking board:\n");
+  //print_board();
 #endif
 
   // check rows
@@ -238,31 +279,3 @@ void check() {
   print_state();
 }
 
-/* 3-tiles */
-int ABC[3] = {0, 1, 2};
-int BDE[3] = {1, 3, 4};
-int DCB[3] = {3, 2, 1};
-int CAD[3] = {2, 0, 3};
-int BAC[3] = {1, 0, 2};
-int EAD[3] = {4, 0, 3};
-int AEC[3] = {0, 4, 2};
-
-/* 2-tiles */
-int BE[2] = {1, 4};
-int ED[2] = {4, 3};
-
-int main(int argc, char *argv[]) {
-  int *cols[5];
-  
-  printf("5-rows ABCBE BACED\n");
-  cols[0] = BDE; cols[1] = DCB; cols[2] = CAD; cols[3] = EAD; cols[4] = AEC;
-  try_5rows(ABC, BE, BAC, ED, cols);
-
-  printf("5-rows CADBE ABCED\n");
-  cols[0] = BDE; cols[1] = DCB; cols[2] = BAC; cols[3] = EAD; cols[4] = AEC;
-  try_5rows(CAD, BE, ABC, ED, cols);
-
-  printf("5-rows CADBE BACED\n");
-  cols[0] = ABC; cols[1] = BDE; cols[2] = DCB; cols[3] = EAD; cols[4] = AEC;
-  try_5rows(CAD, BE, BAC, ED, cols);
-}
