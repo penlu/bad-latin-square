@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG 0
+
 /* PROBLEM SPECIFICATION */
 #define BOARD_ROWS 5
 #define BOARD_COLS 5
@@ -20,7 +22,50 @@ const char *tiles[NUM_TILES] = {
   "54"
 };
 
-/* LAYOUT INFO */
+/* BOARDISH FUNCTIONS */
+
+void board_print(char board[BOARD_ROWS][BOARD_COLS]) {
+  printf("board:\n");
+  for (int r = 0; r < BOARD_ROWS; r++) {
+    for (int c = 0; c < BOARD_COLS; c++) {
+      printf("%d ", board[r][c]);
+    }
+    printf("\n");
+  }
+}
+
+// check symbol exclusivity across rows
+int board_check_row(char board[BOARD_ROWS][BOARD_COLS], int r) {
+  int seen[256] = {0};
+  for (int c = 0; c < BOARD_COLS; c++) {
+    if (board[r][c] && seen[board[r][c]]) {
+#if DEBUG
+      fprintf(stderr, "row conflict %d %d %d\n", r, c, board[r][c]);
+#endif
+      return 1; // row conflict
+    }
+    seen[board[r][c]] = 1;
+  }
+  return 0;
+}
+
+// check symbol exclusivity down columns
+int board_check_col(char board[BOARD_ROWS][BOARD_COLS], int c) {
+  int seen[256] = {0};
+  for (int r = 0; r < BOARD_ROWS; r++) {
+    if (board[r][c] && seen[board[r][c]]) {
+#if DEBUG
+      fprintf(stderr, "col conflict %d %d %d\n", r, c, board[r][c]);
+#endif
+      return 1; // col conflict
+    }
+    seen[board[r][c]] = 1;
+  }
+  return 0;
+}
+
+/* LAYOUT */
+
 struct place {
   int tile;
   int sense;
@@ -55,39 +100,27 @@ struct layout *layout_new() {
   return lay;
 }
 
-// check symbol exclusivity across rows
-int board_check_row(char board[BOARD_ROWS][BOARD_COLS], int r) {
-  int seen[256];
-  for (int c = 0; c < BOARD_COLS; c++) {
-    if (seen[board[r][c]]) {
-      fprintf(stderr, "row conflict %d %d %d\n", r, c, board[r][c]);
-      return 1; // row conflict
-    }
-    seen[board[r][c]] = 1;
+void layout_print(struct layout *lay) {
+  for (int i = 0; i < NUM_TILES; i++) {
+    struct place p = lay->places[i];
+    printf("tile %d, sense %d, dir %d, row %d, col %d\n",
+      p.tile, p.sense, p.dir, p.r, p.c);
   }
-  return 0;
+
+  board_print(lay->board);
 }
 
-// check symbol exclusivity down columns
-int board_check_col(char board[BOARD_ROWS][BOARD_COLS], int c) {
-  int seen[256];
-  for (int r = 0; r < BOARD_ROWS; r++) {
-    if (seen[board[r][c]]) {
-      fprintf(stderr, "col conflict %d %d %d\n", r, c, board[r][c]);
-      return 1; // col conflict
-    }
-    seen[board[r][c]] = 1;
-  }
-  return 0;
-}
+/* MAJOR SOLVER SUBROUTINES */
 
 // either places the piece in the layout and returns 0
 // or there's an issue and returns 1
-int layout_place(struct layout *lay, struct place p) {
+int place_next(struct layout *lay, struct place p) {
   int len = strlen(tiles[p.tile]);
 
   if (lay->used[p.tile]) {
+#if DEBUG
     fprintf(stderr, "tile already used\n");
+#endif
     return 1;
   }
 
@@ -98,12 +131,16 @@ int layout_place(struct layout *lay, struct place p) {
     int c = p.c + (p.dir ? 0 : j);
 
     if (r < 0 || BOARD_ROWS <= r || c < 0 || BOARD_COLS <= c) {
+#if DEBUG
       fprintf(stderr, "tile out of bounds\n");
+#endif
       return 1;
     }
 
     if (lay->board[r][c] != 0) {
+#if DEBUG
       fprintf(stderr, "tile overlap\n");
+#endif
       return 1;
     }
   }
@@ -159,14 +196,16 @@ fail:
 }
 
 // leaves layout same as before called
-struct layout **layout_solve(struct layout *lay) {
+struct layout **solve(struct layout *lay) {
   int sols = 0;
   struct layout **ret = malloc(sizeof(struct layout*));
   ret[0] = NULL;
 
   // check finished
   if (lay->placed == NUM_TILES) {
+#if DEBUG
     fprintf(stderr, "PLACED ALL TILES\n");
+#endif
     struct layout *sol = malloc(sizeof(struct layout));
     ret = realloc(ret, sizeof(struct layout*) * 2);
 
@@ -192,14 +231,18 @@ struct layout **layout_solve(struct layout *lay) {
     }
   }
   if (!found) {
+#if DEBUG
     fprintf(stderr, "FAILED to find empty slot\n");
+#endif
     return ret;
   }
 
   // try each feasible tile placement nondeterministically
   for (int i = 0; i < NUM_TILES; i++) {
     if (!lay->used[i]) {
+#if DEBUG
       fprintf(stderr, "TRYING TILE %d AT R:%d C:%d\n", i, r, c);
+#endif
 
       int sense, dir;
       for (sense = 0; sense < 2; sense++)
@@ -212,8 +255,8 @@ struct layout **layout_solve(struct layout *lay) {
         p.r = r;
         p.c = c;
 
-        if (!layout_place(lay, p)) {
-          struct layout **res = layout_solve(lay);
+        if (!place_next(lay, p)) {
+          struct layout **res = solve(lay);
 
           // remove from board
           int len = strlen(tiles[p.tile]);
@@ -243,21 +286,6 @@ struct layout **layout_solve(struct layout *lay) {
   return ret;
 }
 
-void layout_print(struct layout *lay) {
-  for (int i = 0; i < NUM_TILES; i++) {
-    struct place p = lay->places[i];
-    printf("tile %d, sense %d, dir %d, row %d, col %d\n",
-      p.tile, p.sense, p.dir, p.r, p.c);
-  }
-  printf("board:\n");
-  for (int r = 0; r < BOARD_ROWS; r++) {
-    for (int c = 0; c < BOARD_COLS; c++) {
-      printf("%d ", lay->board[r][c]);
-    }
-    printf("\n");
-  }
-}
-
 int main(int argc, char *argv[]) {
   int tot = 0;
   for (int i = 0; i < NUM_TILES; i++) {
@@ -270,12 +298,15 @@ int main(int argc, char *argv[]) {
   }
 
   struct layout *init = layout_new();
-  struct layout **solutions = layout_solve(init);
+  struct layout **solutions = solve(init);
 
-  for (int i = 0; solutions[i]; i++) {
+  int i;
+  for (i = 0; solutions[i]; i++) {
     layout_print(solutions[i]);
+    free(solutions[i]);
     printf("\n");
   }
+  printf("%d solutions found\n", i);
 
   return 0;
 }
