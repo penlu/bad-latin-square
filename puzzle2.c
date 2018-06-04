@@ -196,7 +196,8 @@ fail:
 }
 
 // leaves layout same as before called
-struct layout **solve(struct layout *lay) {
+int visits[NUM_TILES] = {0};
+struct layout **solve(struct layout *lay, int depth) {
   int sols = 0;
   struct layout **ret = malloc(sizeof(struct layout*));
   ret[0] = NULL;
@@ -215,6 +216,9 @@ struct layout **solve(struct layout *lay) {
 
     return ret;
   }
+
+  // count visit to node at depth
+  visits[depth]++;
 
   // find next open board space
   int r, c;
@@ -256,7 +260,7 @@ struct layout **solve(struct layout *lay) {
         p.c = c;
 
         if (!place_next(lay, p)) {
-          struct layout **res = solve(lay);
+          struct layout **res = solve(lay, depth + 1);
 
           // remove from board
           int len = strlen(tiles[p.tile]);
@@ -298,14 +302,23 @@ int main(int argc, char *argv[]) {
   }
 
   struct layout *init = layout_new();
-  struct layout **solutions = solve(init);
+  struct layout **solutions = solve(init, 0);
 
+  // show the gold
   int i;
   for (i = 0; solutions[i]; i++) {
     layout_print(solutions[i]);
     free(solutions[i]);
     printf("\n");
   }
+
+  // stats for interest
+  int tot_visits = 0;
+  for (int i = 0; i < NUM_TILES; i++) {
+    printf("examined %d nodes at depth %d\n", visits[i], i);
+    tot_visits += visits[i];
+  }
+  printf("examined %d nodes total\n", tot_visits);
   printf("%d solutions found\n", i);
 
   return 0;
