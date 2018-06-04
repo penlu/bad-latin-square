@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 void print_state();
 void check();
@@ -246,10 +246,10 @@ void print_state() {
 int checks = 0;
 void check() {
   checks++;
-  if (checks % 10000 == 0) {
+  /*if (checks % 10000 == 0) {
     printf("%d checks\n", checks);
     print_state();
-  }
+  }*/
 
 #if DEBUG
   printf("checking board:\n");
